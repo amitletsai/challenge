@@ -1,28 +1,34 @@
 # Import libraries
-
 import argparse
 import glob
 import os
-
+import logging
 import pandas as pd
-
+from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+import mlflow
+import mlflow.sklearn
 
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
-# define functions
+# Define functions
 def main(args):
-    # TO DO: enable autologging
+    # Enable autologging with MLflow
+    mlflow.start_run()
+    mlflow.autolog()
 
-
-    # read data
+    # Read data
     df = get_csvs_df(args.training_data)
 
-    # split data
+    # Split data
     X_train, X_test, y_train, y_test = split_data(df)
 
-    # train model
+    # Train model
     train_model(args.reg_rate, X_train, X_test, y_train, y_test)
 
+    # End MLflow run
+    mlflow.end_run()
 
 def get_csvs_df(path):
     if not os.path.exists(path):
@@ -32,43 +38,52 @@ def get_csvs_df(path):
         raise RuntimeError(f"No CSV files found in provided data path: {path}")
     return pd.concat((pd.read_csv(f) for f in csv_files), sort=False)
 
+def split_data(df):
+    # Assuming the dataframe has a target column named 'target'
+    if 'target' not in df.columns:
+        raise RuntimeError("Dataframe must contain a 'target' column")
 
-# TO DO: add function to split data
-
+    X = df.drop(columns='target')
+    y = df['target']
+    
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    return X_train, X_test, y_train, y_test
 
 def train_model(reg_rate, X_train, X_test, y_train, y_test):
-    # train model
-    LogisticRegression(C=1/reg_rate, solver="liblinear").fit(X_train, y_train)
+    # Train model
+    model = LogisticRegression(C=1/reg_rate, solver="liblinear")
+    model.fit(X_train, y_train)
 
+    # Log model
+    mlflow.sklearn.log_model(model, "model")
 
 def parse_args():
-    # setup arg parser
+    # Setup argument parser
     parser = argparse.ArgumentParser()
 
-    # add arguments
-    parser.add_argument("--training_data", dest='training_data',
-                        type=str)
-    parser.add_argument("--reg_rate", dest='reg_rate',
-                        type=float, default=0.01)
+    # Add arguments
+    parser.add_argument("--training_data", dest='training_data', type=str, required=True, help="Path to the training data directory")
+    parser.add_argument("--reg_rate", dest='reg_rate', type=float, default=0.01, help="Regularization rate for Logistic Regression")
 
-    # parse args
+    # Parse arguments
     args = parser.parse_args()
 
-    # return args
     return args
 
-# run script
+# Run script
 if __name__ == "__main__":
-    # add space in logs
+    # Add space in logs
     print("\n\n")
     print("*" * 60)
 
-    # parse args
+    # Parse args
     args = parse_args()
 
-    # run main function
+    # Run main function
     main(args)
 
-    # add space in logs
+    # Add space in logs
     print("*" * 60)
     print("\n\n")
