@@ -2,21 +2,19 @@
 import argparse
 import glob
 import os
-import logging
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+
 import mlflow
 import mlflow.sklearn
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
 
-# Define functions
-def main(args):
-    # Enable autologging with MLflow
-    mlflow.start_run()
-    mlflow.autolog()
+def main(args):  # Line 15
+    # Enable MLflow autologging
+    mlflow.sklearn.autolog()
 
     # Read data
     df = get_csvs_df(args.training_data)
@@ -24,57 +22,76 @@ def main(args):
     # Split data
     X_train, X_test, y_train, y_test = split_data(df)
 
-    # Train model
-    train_model(args.reg_rate, X_train, X_test, y_train, y_test)
+    # Train model and log metrics
+    with mlflow.start_run():
+        train_model(args.reg_rate, X_train, X_test, y_train, y_test)
 
-    # End MLflow run
-    mlflow.end_run()
 
-def get_csvs_df(path):
+def get_csvs_df(path):  # Line 29
     if not os.path.exists(path):
         raise RuntimeError(f"Cannot use non-existent path provided: {path}")
+
     csv_files = glob.glob(f"{path}/*.csv")
     if not csv_files:
         raise RuntimeError(f"No CSV files found in provided data path: {path}")
+
     return pd.concat((pd.read_csv(f) for f in csv_files), sort=False)
 
-def split_data(df):
-    # Assuming the dataframe has a target column named 'target'
-    if 'target' not in df.columns:
-        raise RuntimeError("Dataframe must contain a 'target' column")
 
-    X = df.drop(columns='target')
-    y = df['target']
-    
-    # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
+def split_data(df):  # Line 37
+    # Assume 'Diabetic' is the target column
+    X = df.drop('Diabetic', axis=1)
+    y = df['Diabetic']
+
+    # Split data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
     return X_train, X_test, y_train, y_test
 
-def train_model(reg_rate, X_train, X_test, y_train, y_test):
-    # Train model
-    model = LogisticRegression(C=1/reg_rate, solver="liblinear")
+
+def train_model(reg_rate, X_train, X_test, y_train, y_test):  # Line 47
+    # Train logistic regression model
+    model = LogisticRegression(C=1 / reg_rate, solver="liblinear")
     model.fit(X_train, y_train)
 
-    # Log model
-    mlflow.sklearn.log_model(model, "model")
+    # Predict and evaluate the model
+    y_pred = model.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    report = classification_report(y_test, y_pred)
 
-def parse_args():
-    # Setup argument parser
+    print(
+        f"Accuracy: {accuracy}"
+    )
+    print(
+        f"Classification Report:\n{report}"
+    )
+
+    # Log metrics
+    mlflow.log_metric("accuracy", accuracy)
+
+
+def parse_args():  # Line 63
+    # Setup arg parser
     parser = argparse.ArgumentParser()
 
     # Add arguments
-    parser.add_argument("--training_data", dest='training_data', type=str, required=True, help="Path to the training data directory")
-    parser.add_argument("--reg_rate", dest='reg_rate', type=float, default=0.01, help="Regularization rate for Logistic Regression")
+    parser.add_argument(
+        "--training_data", dest='training_data', type=str, required=True
+    )
+    parser.add_argument(
+        "--reg_rate", dest='reg_rate', type=float, default=0.01
+    )
 
-    # Parse arguments
+    # Parse args
     args = parser.parse_args()
 
     return args
 
+
 # Run script
-if __name__ == "__main__":
-    # Add space in logs
+if __name__ == "__main__":  # Line 78
     print("\n\n")
     print("*" * 60)
 
@@ -84,6 +101,5 @@ if __name__ == "__main__":
     # Run main function
     main(args)
 
-    # Add space in logs
     print("*" * 60)
     print("\n\n")
