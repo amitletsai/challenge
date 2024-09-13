@@ -10,6 +10,6 @@ inputs:
     path: azureml://datastores/workspaceblobstore/paths/diabetes-dev-folder/
   reg_rate: 0.01
 environment: azureml:AzureML-sklearn-0.24-ubuntu18.04-py37-cpu@latest
-compute: azureml:your-compute-instance
+compute: azureml:challage-compute
 experiment_name: diabetes-training
 description: "Training job for diabetes classification"
