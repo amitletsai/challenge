@@ -7,7 +7,7 @@ command: >-
 inputs:
   training_data: 
     type: uri_folder 
-    path: azureml://datastores/workspaceblobstore/paths/diabetes-dev-folder/
+    path: azureml://subscriptions/3f53d715-2da3-4020-895b-b9b7b6158f70/resourcegroups/challange-amit/workspaces/aml-challanage/datastores/workspaceblobstore/paths/UI/2024-09-13_070502_UTC/
   reg_rate: 0.01
 environment: azureml:AzureML-sklearn-0.24-ubuntu18.04-py37-cpu@latest
 compute: azureml:challage-compute
